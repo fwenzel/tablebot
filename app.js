@@ -9,6 +9,12 @@ var state = {
     up: false  // Am I on stage?
 };
 
+var current_song = {
+    up: 0,
+    down: 0,
+    snags: 0
+};
+
 /**
  * Step up as DJ.
  */
@@ -43,6 +49,63 @@ var check_dj = function() {
             stepDown();
         }
     });
+};
+
+/**
+ * Track vote stats.
+ */
+var track_votes = function(data) {
+    current_song.up = data.room.metadata.upvotes;
+    current_song.down = data.room.metadata.downvotes;
+
+    if (data.room.metadata.votelog[0][1] == 'up') {
+        console.log('[Upvote] (+' + data.room.metadata.upvotes + ' -' + data.room.metadata.downvotes + ')');
+    } else {
+        console.log('[Downvote] (+' + data.room.metadata.upvotes + ' -' + data.room.metadata.downvotes + ')');
+    }
+};
+
+/**
+ * Track snags.
+ */
+var track_snags = function(data) {
+    current_song.snags++;
+
+    console.log('[Snagged]');
+};
+
+/**
+ * Callback handler when a new song starts.
+ */
+var new_song_handler = function(data) {
+    reset_song_data(data);
+};
+
+/**
+ * Callback handler when a song ends.
+ */
+var end_song_handler = function(data) {
+    speak_stats();
+};
+
+/**
+ * Reset current song stats.
+ */
+var reset_song_data = function(data) {
+    current_song.up = data.room.metadata.upvotes;
+    current_song.down = data.room.metadata.downvotes;
+    current_song.snags = 0;
+
+    console.log('Reset song data');
+};
+
+/**
+ * Speaks stats about song to chat.
+ */
+var speak_stats = function() {
+    bot.speak('STATS: :+1: ' + current_song.up +
+              ' / :-1: ' + current_song.down +
+              ' / :heart: ' + current_song.snags);
 };
 
 /**
@@ -117,6 +180,12 @@ bot.on('rem_dj', function(data) {
     console.log('Someone stopped being DJ');
     check_dj();
 });
+
+bot.on('newsong', new_song_handler);
+bot.on('endsong', end_song_handler);
+
+bot.on('update_votes', track_votes);
+bot.on('snagged', track_snags);
 
 bot.on('pmmed', command);
 bot.on('speak', command);
