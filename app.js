@@ -66,7 +66,7 @@ var COMMANDS = {
             bot.pm('pong', data.senderid);
         },
         mod: false
-    }
+    },
     quit: {
         help: 'Quit the bot.',
         run: function(data) {
