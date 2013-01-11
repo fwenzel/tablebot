@@ -8,16 +8,20 @@ var bot = new Bot(nconf.get('tt_auth'), nconf.get('tt_userid'),
 var state = {
     up: false  // Am I on stage?
 };
-
 var current_song = {
     up: 0,
     down: 0,
     snags: 0
 };
 
-/**
- * Step up as DJ.
- */
+// Out!
+var quit = function() {
+    console.log("That's it, I'm outta here!");
+    bot.roomDeregister();  // Leave room.
+    process.exit();
+}
+
+// Step up as DJ.
 var stepUp = function() {
     bot.addDj(function() {
         state.up = true;
@@ -25,9 +29,7 @@ var stepUp = function() {
     });
 };
 
-/**
- * Step down as DJ.
- */
+// Step down as DJ.
 var stepDown = function() {
     bot.remDj(function() {
         state.up = false;
@@ -35,9 +37,7 @@ var stepDown = function() {
     });
 };
 
-/**
- * Check if we should become a DJ, or stop becoming one.
- */
+// Check if we should become a DJ, or stop becoming one.
 var check_dj = function() {
     bot.roomInfo(false, function(info) {
         var djs = info.room.metadata.djcount;
@@ -51,9 +51,7 @@ var check_dj = function() {
     });
 };
 
-/**
- * Track vote stats.
- */
+// Track vote stats.
 var track_votes = function(data) {
     current_song.up = data.room.metadata.upvotes;
     current_song.down = data.room.metadata.downvotes;
@@ -65,32 +63,24 @@ var track_votes = function(data) {
     }
 };
 
-/**
- * Track snags.
- */
+// Track snags.
 var track_snags = function(data) {
     current_song.snags++;
 
     console.log('[Snagged]');
 };
 
-/**
- * Callback handler when a new song starts.
- */
+// Callback handler when a new song starts.
 var new_song_handler = function(data) {
     reset_song_data(data);
 };
 
-/**
- * Callback handler when a song ends.
- */
+// Callback handler when a song ends.
 var end_song_handler = function(data) {
     speak_stats();
 };
 
-/**
- * Reset current song stats.
- */
+// Reset current song stats.
 var reset_song_data = function(data) {
     current_song.up = data.room.metadata.upvotes;
     current_song.down = data.room.metadata.downvotes;
@@ -99,18 +89,14 @@ var reset_song_data = function(data) {
     console.log('Reset song data');
 };
 
-/**
- * Speaks stats about song to chat.
- */
+// Speaks stats about song to chat.
 var speak_stats = function() {
     bot.speak('STATS: :+1: ' + current_song.up +
               ' / :-1: ' + current_song.down +
               ' / :heart: ' + current_song.snags);
 };
 
-/**
- * Listen to commands from moderators
- */
+// Listen to commands from moderators
 var COMMANDS = {
     help: {
         help: 'List all commands.',
@@ -132,10 +118,7 @@ var COMMANDS = {
     },
     quit: {
         help: 'Quit the bot.',
-        run: function(data) {
-            bot.roomDeregister();  // Leave.
-            process.exit();
-        },
+        run: quit,
         mod: true
     }
 }
@@ -164,6 +147,8 @@ var command = function(data) {
 
 
 /** Events */
+process.on('SIGINT', quit);
+
 bot.on('ready', function(data) {
     console.log('Ready to roll!');
     check_dj();
