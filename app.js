@@ -17,7 +17,7 @@ var stepUp = function() {
         state.up = true;
         console.log('Stepped up!');
     });
-}
+};
 
 /**
  * Step down as DJ.
@@ -27,7 +27,7 @@ var stepDown = function() {
         state.up = false;
         console.log('Stepped down!');
     });
-}
+};
 
 /**
  * Check if we should become a DJ, or stop becoming one.
@@ -43,7 +43,54 @@ var check_dj = function() {
             stepDown();
         }
     });
+};
+
+/**
+ * Listen to commands from moderators
+ */
+var COMMANDS = {
+    help: {
+        help: 'List all commands.',
+        run: function(data) {
+            // PM the sender. If pmmed, we'll use senderid.
+            // If spoken, it's userid.
+            var recipient = data.senderid || data.userid;
+
+            for (var n in COMMANDS) {
+                bot.pm('/' + n + (COMMANDS[n].mod ? '*' : '') + ': ' +
+                       COMMANDS[n]['help'], recipient);
+            }
+            bot.pm('*: mod only.', recipient)
+        },
+        mod: false
+    },
+    quit: {
+        help: 'Quit the bot.',
+        run: function(data) {
+            bot.roomDeregister();  // Leave.
+            process.exit();
+        },
+        mod: true
+    }
 }
+var command = function(data) {
+    if (data.text[0] != '/') return;  // All commands start with slash.
+
+    var cmd = data.text.slice(1);
+    if (!(cmd in COMMANDS)) return;  // Unknown command.
+    console.log('Got command: ' + cmd)
+
+    if (COMMANDS[cmd].mod) {  // Moderator-only command!
+        bot.roomInfo(false, function(info) {
+            if (info.room.metadata.moderator_id.indexOf(data.senderid || data.userid) != -1) {
+                COMMANDS[cmd].run(data);
+            }
+        });
+    } else {  // Public command.
+        COMMANDS[cmd].run(data);
+    }
+};
+
 
 /** Events */
 bot.on('ready', function(data) {
@@ -62,3 +109,6 @@ bot.on('rem_dj', function(data) {
     console.log('Someone stopped being DJ');
     check_dj();
 });
+
+bot.on('pmmed', command);
+bot.on('speak', command);
