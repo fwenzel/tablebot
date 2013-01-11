@@ -52,18 +52,21 @@ var COMMANDS = {
     help: {
         help: 'List all commands.',
         run: function(data) {
-            // PM the sender. If pmmed, we'll use senderid.
-            // If spoken, it's userid.
-            var recipient = data.senderid || data.userid;
-
             for (var n in COMMANDS) {
                 bot.pm('/' + n + (COMMANDS[n].mod ? '*' : '') + ': ' +
-                       COMMANDS[n]['help'], recipient);
+                       COMMANDS[n]['help'], data.senderid);
             }
-            bot.pm('*: mod only.', recipient)
+            bot.pm('*: mod only.', data.senderid)
         },
         mod: false
     },
+    ping: {
+        help: 'Pong.',
+        run: function(data) {
+            bot.pm('pong', data.senderid);
+        },
+        mod: false
+    }
     quit: {
         help: 'Quit the bot.',
         run: function(data) {
@@ -76,13 +79,18 @@ var COMMANDS = {
 var command = function(data) {
     if (data.text[0] != '/') return;  // All commands start with slash.
 
+    // If pmmed, the sender is in senderid. If spoken, it's userid. Silly.
+    if (!data.senderid) {
+        data.senderid = data.userid;
+    }
+
     var cmd = data.text.slice(1);
     if (!(cmd in COMMANDS)) return;  // Unknown command.
     console.log('Got command: ' + cmd)
 
     if (COMMANDS[cmd].mod) {  // Moderator-only command!
         bot.roomInfo(false, function(info) {
-            if (info.room.metadata.moderator_id.indexOf(data.senderid || data.userid) != -1) {
+            if (info.room.metadata.moderator_id.indexOf(data.senderid) != -1) {
                 COMMANDS[cmd].run(data);
             }
         });
