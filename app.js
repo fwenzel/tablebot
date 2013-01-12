@@ -1,14 +1,18 @@
 var nconf = require('nconf');
+var ttapi = require('ttapi');
+var util = require('util');
+
 nconf.argv().env().file({ file: 'local.json' });
 
-var Bot = require('ttapi');
-var bot = new Bot(nconf.get('tt_auth'), nconf.get('tt_userid'),
-                  nconf.get('tt_roomid'));
+var bot = new ttapi(nconf.get('tt_auth'), nconf.get('tt_userid'),
+                    nconf.get('tt_roomid'));
 
 var state = {
     up: false  // Am I on stage?
 };
 var current_song = {
+    song: null,
+    artist: null,
     up: 0,
     down: 0,
     snags: 0
@@ -38,9 +42,13 @@ var stepDown = function() {
 };
 
 // Check if we should become a DJ, or stop becoming one.
-var check_dj = function() {
-    bot.roomInfo(false, function(info) {
-        var djs = info.room.metadata.djcount;
+var check_dj = function(log_counts) {
+    bot.roomInfo(false, function(data) {
+        var djs = data.room.metadata.djcount;
+        if (log_counts) {
+            console.log(util.format('%d listeners and %d DJs.',
+                        data.room.metadata.listeners, djs));
+        }
         if (djs == 1 && !state.up) {
             // If only one DJ is up, support them.
             stepUp();
@@ -82,8 +90,14 @@ var end_song_handler = function(data) {
 
 // Reset current song stats.
 var reset_song_data = function(data) {
-    current_song.up = data.room.metadata.upvotes;
-    current_song.down = data.room.metadata.downvotes;
+    var room_data = data.room.metadata;
+    if (room_data.current_song) {
+        var song_data = room_data.current_song.metadata;
+        current_song.song = song_data.song;
+        current_song.artist = song_data.artist;
+    }
+    current_song.up = room_data.upvotes;
+    current_song.down = room_data.downvotes;
     current_song.snags = 0;
 
     console.log('Reset song data');
@@ -91,9 +105,10 @@ var reset_song_data = function(data) {
 
 // Speaks stats about song to chat.
 var speak_stats = function() {
-    bot.speak('STATS: :+1: ' + current_song.up +
-              ' / :-1: ' + current_song.down +
-              ' / :heart: ' + current_song.snags);
+    bot.speak(
+        util.format('"%s" by %s. STATS: :+1: %d / :-1: %d / :heart: %d',
+            current_song.song, current_song.artist, current_song.up,
+            current_song.down, current_song.snags));
 };
 
 // Listen to commands from moderators
@@ -151,7 +166,7 @@ process.on('SIGINT', quit);
 
 bot.on('ready', function(data) {
     console.log('Ready to roll!');
-    check_dj();
+    check_dj(true);
 });
 
 bot.on('add_dj', function(data) {
@@ -165,6 +180,8 @@ bot.on('rem_dj', function(data) {
     console.log('Someone stopped being DJ');
     check_dj();
 });
+
+bot.on('roomChanged', reset_song_data);
 
 bot.on('newsong', new_song_handler);
 bot.on('endsong', end_song_handler);
