@@ -16,4 +16,6 @@ A simple (?) turntable.fm bot.
 
 Check out the [ttapi docs](https://github.com/alaingilbert/Turntable-API).
 
-You might want to create a new, separate user account for this bot. Then, retrieve its user id, auth token and room id via the ttapi bookmarklet, and set those values in ``local.json``.
+You might want to create a new, separate user account for this bot. Then,
+retrieve its user id, auth token and room id via the ttapi bookmarklet
+(see ttapi docs), and set those values in ``local.json``.
