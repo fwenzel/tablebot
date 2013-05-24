@@ -1,0 +1,10 @@
+name: tablebot
+
+framework:
+    type: node
+
+mem: 64M
+
+processes:
+    web: ~
+command: node app.js
